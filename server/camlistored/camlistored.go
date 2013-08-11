@@ -18,6 +18,8 @@ limitations under the License.
 package main
 
 import (
+    . "camlistore.org/third_party/github.com/jaekwon/go-prelude/colors"
+
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -82,12 +84,14 @@ var (
 )
 
 func init() {
+    fmt.Println(Blue("** init"))
 	if debug, _ := strconv.ParseBool(os.Getenv("CAMLI_DEBUG")); debug {
 		flag.BoolVar(&flagPollParent, "pollparent", false, "Camlistored regularly polls its parent process to detect if it has been orphaned, and terminates in that case. Mainly useful for tests.")
 	}
 }
 
 func exitf(pattern string, args ...interface{}) {
+    fmt.Println(Blue("** exitf"))
 	if !strings.HasSuffix(pattern, "\n") {
 		pattern = pattern + "\n"
 	}
@@ -113,6 +117,7 @@ func exitf(pattern string, args ...interface{}) {
 // 2) is satisfied by doing our own checks,
 // See pkg/client
 func genSelfTLS(listen string) error {
+    fmt.Println(Blue("** genSelfTLS"))
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		return fmt.Errorf("failed to generate private key: %s", err)
@@ -184,9 +189,11 @@ func genSelfTLS(listen string) error {
 // If file is empty, a default high-level config is written
 // for the user.
 func findConfigFile(file string) (absPath string, err error) {
+    fmt.Println(Blue(fmt.Sprintf("** findConfigFile(%v)", file)))
 	switch {
 	case file == "":
 		absPath = osutil.UserServerConfigPath()
+        fmt.Println(Blue(fmt.Sprintf(" -> UserServerConfigPath: %v", absPath)))
 		_, err = os.Stat(absPath)
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(osutil.CamliConfigDir(), 0700)
@@ -222,6 +229,7 @@ type defaultConfigFile struct {
 }
 
 func newDefaultConfigFile(path string) error {
+    fmt.Println(Blue("** newDefaultConfigFile"))
 	conf := defaultConfigFile{
 		Listen:      ":3179",
 		HTTPS:       false,
@@ -274,6 +282,7 @@ func newDefaultConfigFile(path string) error {
 }
 
 func initSQLiteDB(path string) error {
+    fmt.Println(Blue("** initSQLiteDB"))
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return err
@@ -296,6 +305,7 @@ func initSQLiteDB(path string) error {
 }
 
 func setupTLS(ws *webserver.Server, config *serverconfig.Config, listen string) {
+    fmt.Println(Blue("** setupTLS"))
 	cert, key := config.OptionalString("TLSCertFile", ""), config.OptionalString("TLSKeyFile", "")
 	if !config.OptionalBool("https", true) {
 		return
@@ -303,6 +313,8 @@ func setupTLS(ws *webserver.Server, config *serverconfig.Config, listen string) 
 	if (cert != "") != (key != "") {
 		exitf("TLSCertFile and TLSKeyFile must both be either present or absent")
 	}
+
+    fmt.Println(Blue(fmt.Sprintf(" -> defCert: %v && defKey: %v", defCert, defKey)))
 
 	if cert == defCert && key == defKey {
 		_, err1 := os.Stat(cert)
@@ -343,6 +355,7 @@ func setupTLS(ws *webserver.Server, config *serverconfig.Config, listen string) 
 }
 
 func handleSignals() {
+    fmt.Println(Blue("** handleSignals"))
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
 	for {
@@ -367,6 +380,7 @@ func handleSignals() {
 // listenAndBaseURL finds the configured, default, or inferred listen address
 // and base URL from the command-line flags and provided config.
 func listenAndBaseURL(config *serverconfig.Config) (listen, baseURL string) {
+    fmt.Println(Blue("** listenAndBaseURL"))
 	baseURL = config.OptionalString("baseURL", "")
 	listen = *listenFlag
 	listenConfig := config.OptionalString("listen", "")
@@ -381,6 +395,7 @@ func listenAndBaseURL(config *serverconfig.Config) (listen, baseURL string) {
 }
 
 func main() {
+    fmt.Println(Blue("** main"))
 	flag.Parse()
 
 	if *flagVersion {
@@ -427,7 +442,7 @@ func main() {
 		}
 	}
 	if *flagConfigFile == "" && !urlOpened {
-		go osutil.OpenURL(ws.ListenURL())
+		//go osutil.OpenURL(ws.ListenURL())
 	}
 
 	go ws.Serve()
